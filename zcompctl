@@ -1,0 +1,289 @@
+hosts=( $hosts ${(s: :)${(ps:\t:)${${(f)"$(</etc/hosts)"}%%\#*}##[:blank:]#[^[:blank:]]
+#}} )
+ports=( "${(@)${(@)${(@f)$(</etc/services)}:#\#*}%%[    ]*}" )
+
+# Completion for zsh builtins.
+compctl -z -P '%' bg
+compctl -j -P '%' fg jobs disown
+compctl -j -P '%' + -s '`ps -x | tail +2 | cut -c1-5`' wait
+compctl -A shift
+compctl -c type whence where which
+compctl -m -x 'W[1,-*d*]' -n - 'W[1,-*a*]' -a - 'W[1,-*f*]' -F -- unhash
+compctl -m -q -S '=' -x 'W[1,-*d*] n[1,=]' -/ - \
+        'W[1,-*d*]' -n -q -S '=' - 'n[1,=]' -/g '*(*)' -- hash
+compctl -F functions unfunction
+compctl -k '(al dc dl do le up al bl cd ce cl cr
+        dc dl do ho is le ma nd nl se so up)' echotc
+compctl -a unalias
+compctl -v getln getopts read unset vared
+compctl -v -S '=' -q declare export integer local readonly typeset
+compctl -eB -x 'p[1] s[-]' -k '(a f m r)' - \
+        'C[1,-*a*]' -ea - 'C[1,-*f*]' -eF - 'C[-1,-*r*]' -ew -- disable
+compctl -dB -x 'p[1] s[-]' -k '(a f m r)' - \
+        'C[1,-*a*]' -da - 'C[1,-*f*]' -dF - 'C[-1,-*r*]' -dw -- enable
+compctl -k "(${(j: :)${(f)$(limit)}%% *})" limit unlimit
+compctl -l '' -x 'p[1]' -f -- . source
+
+# Redirection below makes zsh silent when completing unsetopt xtrace
+compctl -s '$({ unsetopt kshoptionprint; setopt } 2>/dev/null)' + -o + -x 's[no]' -o -- unsetopt
+compctl -s '$({ unsetopt kshoptionprint; unsetopt } 2>/dev/null)' + -o + -x 's[no]' -o -- setopt
+compctl -s '${^fpath}/*(N:t)' autoload
+compctl -b -x 'W[1,-*[DAN]*],C[-1,-*M]' -s '$(bindkey -l)' -- bindkey
+compctl -c -x 'C[-1,-*k]' -A - 'C[-1,-*K]' -F -- compctl
+compctl -x 'C[-1,-*e]' -c - 'C[-1,-[ARWI]##]' -f -- fc
+compctl -x 'p[1]' - 'p[2,-1]' -l '' -- sched
+compctl -x 'C[-1,[+-]o]' -o - 'c[-1,-A]' -A -- set
+compctl -b -x 'w[1,-N] p[3]' -F -- zle
+compctl -s '${^module_path}/*(N:t:r)' -x \
+        'W[1,-*(a*u|u*a)*],W[1,-*a*]p[3,-1]' -B - \
+        'W[1,-*u*]' -s '$(zmodload)' -- zmodload
+
+# Anything after nohup is a command by itself with its own completion
+compctl -l '' nohup noglob exec nice eval - time rusage
+compctl -l '' -x 'p[1]' -eB -- builtin
+compctl -l '' -x 'p[1]' -em -- command
+compctl -x 'p[1]' -c - 'p[2,-1]' -k signals -- trap
+
+#------------------------------------------------------------------------------
+# kill takes signal names as the first argument after -, but job names after %
+# or PIDs as a last resort
+compctl -j -P '%' + -s '`ps -x | tail +2 | cut -c1-5`' + \
+        -x 's[-] p[1]' -k "($signals[1,-3])" -- kill
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# rmdir only real directories
+compctl -/g '*(/)' rmdir dircmp
+#------------------------------------------------------------------------------
+# cd/pushd only directories or symbolic links to directories
+compctl -/ cd chdir dirs pushd
+
+# Another possibility for cd/pushd is to use it in conjunction with the
+# cdmatch function (in the Functions subdirectory of zsh distribution).
+compctl -K cdmatch -S '/' -q -x 'p[2]' -Q -K cdmatch2 - \
+        'S[/][~][./][../]' -g '*(-/)' + -g '*(-/D)' - \
+        'n[-1,/]' -K cdmatch -S '/' -q -- cd chdir pushd
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Run ghostscript on postscript files, but if no postscript file matches what
+# we already typed, complete directories as the postscript file may not be in
+# the current directory.
+compctl -/g '*.(e|E|)(ps|PS)' \
+        gs ghostview nup psps pstops psmulti psnup psselect
+#------------------------------------------------------------------------------
+# Similar things for tex, texinfo and dvi files.
+compctl -/g '*.tex*' {,la,gla,ams{la,},{g,}sli}tex texi2dvi
+compctl -/g '*.dvi' xdvi dvips
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# GCC completion, by Andrew Main
+# completes to filenames (*.c, *.C, *.o, etc.); to miscellaneous options after
+# a -; to various -f options after -f (and similarly -W, -g and -m); and to a
+# couple of other things at different points.
+# The -l completion is nicked from the cc compctl above.
+# The -m completion should be tailored to each system; the one below is i386.
+compctl -/g '*.([cCmisSoak]|cc|cxx|ii|k[ih])' -x \
+        's[-l]' -s '${(s.:.)^LD_LIBRARY_PATH}/lib*.a(:t:r:s/lib//)' - \
+        'c[-1,-x]' -k '(none c objective-c c-header c++ cpp-output
+        assembler assembler-with-cpp)' - \
+        'c[-1,-o]' -f - \
+        'C[-1,-i(nclude|macros)]' -/g '*.h' - \
+        'C[-1,-i(dirafter|prefix)]' -/ - \
+        's[-B][-I][-L]' -/ - \
+        's[-fno-],s[-f]' -k '(all-virtual cond-mismatch dollars-in-identifiers
+        enum-int-equiv external-templates asm builtin strict-prototype
+        signed-bitfields signd-char this-is-variable unsigned-bitfields
+        unsigned-char writable-strings syntax-only pretend-float caller-saves
+        cse-follow-jumps cse-skip-blocks delayed-branch elide-constructors
+        expensive-optimizations fast-math float-store force-addr force-mem
+        inline-functions keep-inline-functions memoize-lookups default-inline
+        defer-pop function-cse inline peephole omit-frame-pointer
+        rerun-cse-after-loop schedule-insns schedule-insns2 strength-reduce
+        thread-jumps unroll-all-loops unroll-loops)' - \
+        's[-g]' -k '(coff xcoff xcoff+ dwarf dwarf+ stabs stabs+ gdb)' - \
+        's[-mno-][-mno][-m]' -k '(486 soft-float fp-ret-in-387)' - \
+        's[-Wno-][-W]' -k '(all aggregate-return cast-align cast-qual
+        char-subscript comment conversion enum-clash error format id-clash-6
+        implicit inline missing-prototypes missing-declarations nested-externs
+        import parentheses pointer-arith redundant-decls return-type shadow
+        strict-prototypes switch template-debugging traditional trigraphs
+        uninitialized unused write-strings)' - \
+        's[-]' -k '(pipe ansi traditional traditional-cpp trigraphs pedantic
+        pedantic-errors nostartfiles nostdlib static shared symbolic include
+        imacros idirafter iprefix iwithprefix nostdinc nostdinc++ undef)' \
+        -X 'Use "-f", "-g", "-m" or "-W" for more options' -- gcc g++
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# There are (at least) two ways to complete manual pages.  This one is
+# extremely memory expensive if you have lots of man pages
+man_var() {
+    man_pages=( ${^manpath}/man*/*(N:t:r) )
+    compctl -k man_pages -x 'C[-1,-P]' -m - \
+            'R[-*l*,;]' -/g '*.(man|[0-9](|[a-z]))' -- man
+    reply=( $man_pages )
+}
+compctl -K man_var -x 'C[-1,-P]' -m - \
+        'R[-*l*,;]' -/g '*.(man|[0-9](|[a-z]))' -- man
+
+# This one isn't that expensive but somewhat slower
+man_glob () {
+   local a
+   read -cA a
+   if [[ $a[2] = -s ]] then         # Or [[ $a[2] = [0-9]* ]] for BSD
+     reply=( ${^manpath}/man$a[3]/$1*$2(N:t:r) )
+   else
+     reply=( ${^manpath}/man*/$1*$2(N:t:r) )
+   fi
+}
+#compctl -K man_glob -x 'C[-1,-P]' -m - \
+#       'R[-*l*,;]' -/g '*.(man|[0-9nlpo](|[a-z]))' -- man
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# CVS
+#
+cvscmds=(add admin rcs checkout commit diff rdiff export history import log rlog         release remove status tag rtag update annotate)
+cvsignore="*~ *# .#* *.o *.a CVS . .."
+
+compctl -k cvscmds \
+    -x "c[-1,-D]" -k '(today yesterday 1\ week\ ago)' \
+    - "c[-1,-m]" -k '(bugfix cosmetic\ fix ... added\ functionality foo)' \
+    - "c[-1,-F]" -f \
+    - "c[-1,-r]" -K cvsrevisions \
+    - "c[-1,-I]" -f \
+    - "R[add,;]" -K cvsaddp \
+    - "R[(admin|rcs),;]" -/K cvstargets \
+    - "R[(checkout|co),;]" -K cvsrepositories \
+    - "R[(commit|ci),;]" -/K cvstargets \
+    - "R[(r|)diff,;]" -/K cvstargets \
+    - "R[export,;]" -f \
+    - "R[history,;]" -/K cvstargets \
+    - "R[history,;] c[-1,-u]" -u \
+    - "R[import,;]" -K cvsrepositories \
+    - "R[(r|)log,;]" -/K cvstargets \
+    - 'R[(r|)log,;] s[-w] n[-1,,],s[-w]' -u -S , -q \
+    - "R[rel(|ease),;]" -f \
+    - "R[(remove|rm),;] R[-f,;]" -/K cvstargets \
+    - "R[(remove|rm),;]" -K cvsremovep \
+    - "R[status,;]" -/K cvstargets \
+    - "R[(r|)tag,;]" -/K cvstargets \
+    - "R[up(|date),;]" -/K cvstargets \
+    - "R[annotate,;]" -/K cvstargets \
+    -- cvs 
+
+compctl -/K cvstargets cvstest 
+
+cvsprefix() {
+    local nword args f
+    read -nc nword; read -Ac args
+    pref=$args[$nword]
+    if [[ -d $pref:h && ! -d $pref ]]; then
+        pref=$pref:h
+    elif [[ $pref != */* ]]; then
+        pref=
+    fi
+    [[ -n "$pref" && "$pref" != */ ]] && pref=$pref/
+}
+
+cvsentries() {
+    setopt localoptions nullglob unset
+    if [[ -f ${pref}CVS/Entries ]]; then
+        reply=( "${pref}${(@)^${(@)${(@)${(f@)$(<${pref}CVS/Entries)}:#D*}#/}%%/*}" )
+    fi
+}
+
+cvstargets() {
+    local pref
+    cvsprefix
+    cvsentries
+}
+
+cvsrevisions() {
+    reply=( "${(@)${(@)${(@M)${(@f)$(cvs -q status -vl .)}:#    *}##[   ]##}%%[         ]*}" )
+}
+
+cvsrepositories() {
+    local root=$CVSROOT
+    [[ -f CVS/Root ]] && root=$(<CVS/Root)
+    reply=(
+        $root/^CVSROOT(:t)
+        "${(@)${(@M)${(@f)$(<$root/CVSROOT/modules)}:#[^#]*}%%[         ]*}"
+    )
+}
+
+cvsremovep() {
+    local pref
+    cvsprefix
+    cvsentries
+    setopt localoptions unset
+    local omit
+    omit=( ${pref}*(D) )
+    eval 'reply=( ${reply:#('${(j:|:)omit}')} )'
+}
+
+cvsaddp() {
+    local pref
+    cvsprefix
+    cvsentries
+    setopt localoptions unset
+    local all omit
+    all=( ${pref}*(D) )
+    omit=( $reply ${pref}${^${=cvsignore}} )
+    [[ -r ~/.cvsignore ]] && omit=( $omit ${pref}${^$(<~/.cvsignore)} )
+    [[ -r ${pref}.cvsignore ]] && omit=( $omit ${pref}${^$(<${pref}.cvsignore)} )
+    eval 'reply=( ${all:#('${(j:|:)omit}')} )' 
+}
+
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Linux mount
+comp_fsmount () {
+    local tmp; if [[ $UID = 0 ]]; then tmp=""; else tmp="user"; fi
+    sed -n -e "s|^[^#   ][^     ]*[     ][      ]*\(/[^         ]*\)[   ].*$tmp.*|\1|p" /etc/fstab
+}
+comp_nfsmount () {
+    local cmd args host
+    read -Ac cmd; read -cn where
+    host=${${cmd[$where]}%%:*}
+    reply=("${(@f)$(showmount -e $host | sed -n -e "s|^/\([^ ]*\) .*|$host:/\1|p")}")
+}
+compctl -s '$(mount | \
+              sed -e "s/^[^ ]* on \\([^ ]*\\) type.*/\\1/"'"$(
+              if [[ ! $UID = 0 ]]; then
+                  echo ' | egrep "^${(j:|:)$(comp_fsmount)}\$"'
+              fi)"')' umount
+compctl -s '$(comp_fsmount)' + \
+        -x 'S[/]' -f -- + \
+        -x 'C[0,*:*]' -K comp_nfsmount -- + \
+        -s '$(< /etc/hosts)' \
+        mount
+
+#------------------------------------------------------------------------------
+# ssh (secure shell)
+compctl -k hosts \
+        -x "c[-1,-l]" -u \
+        - "c[-1,-i]" -f \
+        - "c[-1,-e]" -k "(~ none)" \
+        - "c[-1,-c]" -k "(idea des 3des tss arcfour none)" \
+        - "c[-1,-p]" -k ports \
+        - "c[-1,-L] c[-1,-R] c[-1,-o]" -k "()" \
+        -- ssh
+#------------------------------------------------------------------------------
+
+# network stuff
+compctl -k hosts \
+        -x "s[-class=]" -k "(any in chaos hesiod)" \
+        - "s[-query=]" -k "(a cname hinfo md mx mb mg minfo ns ptr soa txt uinfo wks any)" \
+        - "s[-]" -Q -S '' -k "(query= all\  class= d2\  nod2\  debug\  nodebug\  defname\  nodefname\  domain= ignoretc\  noignoretc\ )" \
+        -- nslookup
+
+compctl -k hosts \
+        -x "C[-1,[^-]*] p[2,-1]" -k ports \
+        -- telnet
+
+compctl -x 'N[-1,@]' -k hosts - 's[]' -u -qS '@' -- finger
+#------------------------------------------------------------------------------

@@ -1,0 +1,10 @@
+# Converted to zsh prompt theme by bash2zshprompt, written by <adam@spiers.net>
+
+prompt_jax_setup () {
+    PS1="%{$fg_bold[green]%}(%~%)$prompt_newline%{$fg_bold[white]%}[%n@%{$fg_bold[blue]%}%m%{$fg_bold[red]%}(%*%)%{$fg_bold[white]%}]$ %{$reset_color%}"
+
+  precmd () { setopt promptsubst }
+  preexec () { }
+}
+
+prompt_jax_setup "$@"

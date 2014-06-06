@@ -1,0 +1,6 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhist_cnt =4
+let g:netrw_dirhist_1='/Users/jeffsc/Documents/git/frontend'
+let g:netrw_dirhist_2='/Users/jeffsc/Documents/git/frontend/config'
+let g:netrw_dirhist_3='/Users/jeffsc/Documents/git/core/unobtainium/src/main/java/com/blist/backfill'
+let g:netrw_dirhist_4='/Users/jeffsc/Documents/git/frontend/page_templates'
