@@ -6,9 +6,11 @@
 
 ########## Variables
 
-dir=~/navi/github/dotfiles        # dotfiles directory
+dir=~/projects/github/dotfiles        # dotfiles directory
 olddir=~/dotfiles_old             # old dotfiles backup directory
-files="vimrc vim zshrc zcompctl zshenv zsh-func"    # list of files/folders to symlink in homedir
+linkfiles="vimrc vim zshrc zcompctl zshenv zsh-func colorsdb"    # list of files/folders to symlink in homedir
+newdirs="ssh vim-backup"    # folders that should exist, not symlinked
+existfiles="ssh/known_hosts ssh/known_hosts2"    # files that should exist not symlinked
 
 ##########
 
@@ -22,12 +24,21 @@ echo -n "Changing to the $dir directory ..."
 cd $dir
 echo "done"
 
-# move any existing dotfiles in homedir to dotfiles_old directory, then create symlinks from the homedir to any files in the ~/dotfiles directory specified in $files
-for file in $files; do
+# move any existing dotfiles in homedir to dotfiles_old directory, then create symlinks from the homedir to any files in the ~/dotfiles directory specified in $linkfiles
+for file in $linkfiles; do
     echo "Moving any existing dotfiles from ~ to $olddir"
-    mv ~/.$file ~/dotfiles_old/
+    mv ~/.$file ~/$olddir/
     echo "Creating symlink to $file in home directory."
     ln -s $dir/$file ~/.$file
+done
+
+for ndir in $newdirs; do
+    echo "Making $ndir"
+    mkdir -p ~/.$ndir
+done
+for file in $existfiles; do
+    echo "Making $existfiles"
+    touch ~/.$file
 done
 
 install_zsh () {
